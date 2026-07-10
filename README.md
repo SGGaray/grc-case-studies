@@ -9,4 +9,4 @@ These are learning exercises based on public reporting, not internal investigati
 | [Uber 2022 Breach](./uber-2022-breach-analysis.md) | MFA fatigue, social engineering, hardcoded credentials | Complete |
 | [Self-Audit: web-vuln-control-mapping](./self-audit-web-vuln-control-mapping.md) | Five real findings from auditing my own tool's build pipeline and dependencies | Complete |
 
-**Contact:** garaysebastiang@gmail.com | [Portfolio](https://sggaray.github.io/) | [LinkedIn](https://www.linkedin.com/in/sebastian-garay/)
+**Contact:** garaysebastiang@gmail.com | [Portfolio](https://sggaray.vercel.app/) | [LinkedIn](https://www.linkedin.com/in/sebastian-garay/)
