@@ -1,5 +1,5 @@
 # Auditing My Own Tool
-### A Self-Audit of web-vuln-control-mapping, Five Real Findings and What They Taught Me About Risk
+### A Self-Audit of web-vuln-control-mapping, Six Real Findings and What They Taught Me About Risk
 
 **Case Study | Sebastian Garay | GRC, Human Risk & Shadow AI**
 
@@ -7,7 +7,7 @@
 
 ## Why Audit Your Own Code
 
-Most portfolio case studies analyze someone else's breach. That is useful, but it carries a risk: it is easy to sound wise about failures you did not live through. This one is different. `web-vuln-control-mapping` is my own tool, a small Next.js app that maps common web vulnerabilities to risk and governance controls. Over the course of building and maintaining it, five real issues surfaced. I am documenting them the way I would document findings in a client engagement: condition, criteria, cause, effect, and recommendation, because the format matters more when the subject is your own work. It is easier to be honest about someone else's mistakes than your own.
+Most portfolio case studies analyze someone else's breach. That is useful, but it carries a risk: it is easy to sound wise about failures you did not live through. This one is different. `web-vuln-control-mapping` is my own tool, a small Next.js app that maps common web vulnerabilities to risk and governance controls. Over the course of building and maintaining it, six real issues surfaced. I am documenting them the way I would document findings in a client engagement: condition, criteria, cause, effect, and recommendation, because the format matters more when the subject is your own work. It is easier to be honest about someone else's mistakes than your own.
 
 ## Scope and Method
 
@@ -73,9 +73,23 @@ The audit covers the application code, its build and deployment pipeline, and it
 
 **Recommendation and remediation:** Upgraded to Next.js 15 and React 19 together (avoiding a two-major-version jump straight to 16), using a dedicated branch, a full local build and test pass, and a manual smoke test before merging. Verified the fix with a follow-up `npm audit`, which dropped from fourteen high-severity advisories to a single unrelated moderate one (an internal PostCSS dependency, not exploitable in this project's build process). Fixed in commit `chore: upgrade to Next.js 15, React 19, and lucide-react latest`.
 
-## What These Five Findings Have in Common
+## Finding 6: The Tool Named for Control Mapping Never Populated Its Controls
 
-Every single one of these is a friction-driven shortcut, not a knowledge gap. I knew input should be bounded; I just had not gotten to it yet. I knew hardcoding filenames was fragile; it was faster to write it that way the first time. I knew a manual version bump was not a real fix; it unblocked the incident I was debugging at 11pm faster than building the automated version would have.
+**Condition:** The project is named `web-vuln-control-mapping`, and its README and GitHub description both promise that each payload maps to "a related control (NIST 800-53, ISO 27001 Annex A, OWASP ASVS)." The data layer told a different story. In `lib/explain.ts`, the `owasp`, `control`, and `mitigation` fields were declared as optional and left empty on all 23 entries, and the Explain panel in `PayloadGenerator.tsx` rendered only `summary`, `why`, and `when`. The control mapping the project is named for did not exist in the data or the UI.
+
+**Criteria:** The name and stated purpose of an artifact must match what it delivers. This is the honesty-first standard I apply to my own case studies, that where I interpret rather than report fact, I say so, and it applies most strictly to a tool whose entire premise is connecting a technical finding to a governance control.
+
+**Cause:** The type schema made the three governance fields optional (`owasp?`, `control?`, `mitigation?`), so an entry was structurally valid with them empty. The README described the intended design rather than the shipped state. And unlike Findings 1 through 5, this gap never produced a runtime error, no build failed and no page broke, so nothing forced it to surface. It was a content gap, invisible to every test.
+
+**Effect:** This is the most consequential place a gap could sit. The differentiator of the whole project is connecting the technical layer to governance, and a reviewer who opened the repo named for that exact mapping would have found the mapping absent. A tool that names a capability it does not deliver undercuts its own premise more than a missing feature elsewhere would.
+
+**Recommendation and remediation:** Made `owasp`, `control`, and `mitigation` required fields in the `PayloadExplanation` type, so an empty one is now a compile error rather than a silent omission. Populated all 23 entries with their real OWASP Top 10 2021 category, a mapped control (NIST SP 800-53 SI-10 / ISO 27001:2022 Annex A.8.28 and related), and a concrete per-technique mitigation. Updated `PayloadGenerator.tsx` to render the three governance fields in the Explain panel, visually separated from the conceptual fields. Verified with a clean `tsc --noEmit`, a passing production build, and the existing test suite. Fixed in commit `feat(explain): populate owasp/control/mitigation fields across all 23 payloads`.
+
+## What These Six Findings Have in Common
+
+Every one of the first five is a friction-driven shortcut, not a knowledge gap. I knew input should be bounded; I just had not gotten to it yet. I knew hardcoding filenames was fragile; it was faster to write it that way the first time. I knew a manual version bump was not a real fix; it unblocked the incident I was debugging at 11pm faster than building the automated version would have.
+
+Finding 6 is a different animal, and worth naming as such: not a shortcut taken under pressure, but a promise written before the work behind it was finished. The README described where the tool was going, and the data never caught up. That is its own failure mode, the artifact whose stated scope runs ahead of its shipped state, and it is easy to miss precisely because, unlike the first five, it never breaks anything loudly.
 
 This is the same pattern I wrote about in the Uber 2022 case study: the gap between what a control should do and what a shortcut actually gets shipped, under time pressure, when nobody is watching that specific line yet. The MFA-fatigued contractor and the hardcoded `cp` command are the same failure mode wearing different clothes. Controls do not fail because people do not understand them. They fail because the secure path was slower than the shortcut, in the moment the shortcut got chosen.
 
@@ -85,12 +99,13 @@ This is the same pattern I wrote about in the Uber 2022 case study: the gap betw
 - **Hardcoded values are a governance problem disguised as a coding style choice.** Both the filename list and the manual cache version were the same underlying pattern: a fact about the world encoded once, never re-validated.
 - **A raw vulnerability count is not a risk assessment.** Fourteen advisories sounded severe. Reading each one against actual feature usage cut the real exposure by more than half before a single line of code changed.
 - **Fixing something reactively during an incident is not the same as fixing it properly.** The first cache-busting fix (`?v=2`) solved the immediate outage. It took a second pass, done without time pressure, to remove the human-memory dependency entirely.
+- **A name is a promise, and the data has to keep it.** The control mapping the whole project is named for was declared optional in the type and left empty. Making it a required field turned an easy-to-miss content gap into a compile error, so the promise can no longer drift from what ships.
 
 ## What I'm Learning From This
 
 Auditing your own work is harder than it looks, not technically, but psychologically. Every one of these findings existed for days or weeks before I wrote them down, because in the moment they did not feel like findings, they felt like reasonable shortcuts I would clean up later. Writing them up in this format, condition, criteria, cause, effect, forced a level of honesty that just fixing the code quietly never would have.
 
-That is probably the most transferable lesson here, more than any individual fix. GRC work is not mainly about knowing the frameworks. It is about being willing to write down, in a document someone else will read, the exact moment your own judgment chose speed over rigor. I did that five times in one project. I expect to find it again in the next one.
+That is probably the most transferable lesson here, more than any individual fix. GRC work is not mainly about knowing the frameworks. It is about being willing to write down, in a document someone else will read, the exact moment your own judgment chose speed over rigor. I did that six times in one project. I expect to find it again in the next one.
 
 ---
 
