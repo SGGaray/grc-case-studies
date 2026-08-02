@@ -133,4 +133,11 @@ Human Risk Management, informed by how people actually respond to friction, fati
 
 ---
 
-*Sources: public reporting on the September 2022 Uber security incident, including Uber's security update, coverage of the attacker's methods, and subsequent analysis of MFA fatigue techniques. This is an independent learning analysis, not an internal investigation.*
+*This is an independent learning analysis based on the public sources below, not an internal investigation. I have no inside knowledge of Uber's systems or investigation.*
+
+**Sources:**
+
+- [Uber Newsroom — "Security update" (official statement, 19 Sep 2022)](https://www.uber.com/en-NO/newsroom/security-update/)
+- [TechCrunch — "Uber says it's investigating a cybersecurity incident" (16 Sep 2022)](https://techcrunch.com/2022/09/16/uber-internal-network-hack/)
+- [CNN Business — "Uber investigating 'cybersecurity incident'" (15 Sep 2022)](https://www.cnn.com/2022/09/15/tech/uber-cybersecurity-incident)
+- [Uber Technologies, Inc. — Form 8-K (SEC filing, 2022)](https://www.sec.gov/Archives/edgar/data/1543151/000155278122000558/e22427_ex99-1.htm)
