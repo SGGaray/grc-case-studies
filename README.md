@@ -7,6 +7,6 @@ These are learning exercises based on public reporting, not internal investigati
 | Case Study | Focus | Status |
 |---|---|---|
 | [Uber 2022 Breach](./uber-2022-breach-analysis.md) | MFA fatigue, social engineering, hardcoded credentials | Complete |
-| [Self-Audit: web-vuln-control-mapping](./self-audit-web-vuln-control-mapping.md) ([ES](./self-audit-web-vuln-control-mapping.es.md)) | Six real findings from auditing my own tool: API input handling, security headers, build pipeline, dependencies, and an unpopulated control mapping | Complete |
+| [Self-Audit: web-vuln-control-mapping](./self-audit-web-vuln-control-mapping.md) ([ES](./self-audit-web-vuln-control-mapping.es.md)) | Four real findings from auditing my own tool: API input handling, security headers, dependencies, and an unpopulated control mapping | Complete |
 
 **Contact:** garaysebastiang@gmail.com | [Portfolio](https://sggaray.vercel.app/) | [LinkedIn](https://www.linkedin.com/in/sebastian-garay/)
