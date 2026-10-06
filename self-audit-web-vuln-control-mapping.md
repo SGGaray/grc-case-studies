@@ -3,7 +3,12 @@
 
 **Case Study | Sebastian Garay | GRC, Human Risk & Shadow AI**
 
-> This is a genuine self-audit, not a demonstration exercise. Every finding below was discovered while actively building and maintaining this project, and every fix was applied to the real, live repository. Dates and commit messages are accurate. Nothing here is staged.
+## Review Context
+
+- **Type:** first-party self-audit. I reviewed my own project; this is not an independent or third-party assessment.
+- **Review period:** 5–11 July 2026, the dates of the remediation commits cited below.
+- **Time scope:** the findings and their statuses describe the repository during that review. The project has kept evolving since then, and nothing below describes its current version.
+- **Evidence:** commits in [`SGGaray/web-vuln-control-mapping`](https://github.com/SGGaray/web-vuln-control-mapping), linked by hash in each finding.
 
 ## Why Audit Your Own Code
 
@@ -11,7 +16,7 @@ Most portfolio case studies analyze someone else's breach. That is useful, but i
 
 ## Scope and Method
 
-The audit covers the application code, its dependency posture, and its data layer, as they existed across several weeks of active development. Findings were discovered through a mix of manual code review, dependency scanning (`npm audit`), and hands-on testing of both API endpoints. I did not go looking for problems to pad this report. Every finding here reflects a real gap, not a hypothetical one.
+The audit covers the application code, its dependency posture, and its data layer, as they existed across several weeks of active development. Findings were discovered through a mix of manual code review, dependency scanning (`npm audit`), and hands-on testing of both API endpoints.
 
 ## Finding 1: API Endpoints Accepted Unbounded Input
 
@@ -23,7 +28,9 @@ The audit covers the application code, its dependency posture, and its data laye
 
 **Effect:** A caller could submit an arbitrarily large payload (megabytes of text) to either endpoint, forcing the server to hash or parse it, tying up CPU with no cost to the caller. A trivial, unauthenticated denial-of-service vector, on a tool whose entire purpose is teaching people to think about this exact class of risk.
 
-**Recommendation and remediation:** Added explicit maximum length checks (100,000 characters for `/api/hash`, 20,000 for `/api/headers`) returning HTTP 413 when exceeded. Covered both limits with unit tests asserting the 413 response. Fixed in commit `fix(security): add input length limits on API routes and security headers`.
+**Recommendation and remediation:** Added explicit maximum length checks (100,000 characters for `/api/hash`, 20,000 for `/api/headers`) returning HTTP 413 when exceeded. Covered the `/api/hash` limit with a unit test asserting the 413 response; the `/api/headers` limit had no dedicated test during the review. Fixed in commits [`308bebf`](https://github.com/SGGaray/web-vuln-control-mapping/commit/308bebf0b3798179606c85fcfaf55734d37ad7c4) (`/api/hash`) and [`7e8db67`](https://github.com/SGGaray/web-vuln-control-mapping/commit/7e8db6755c5bed42099423939258994cafd4fb59) (`/api/headers`), both titled `fix(security): add input length limits on API routes and security headers`; the `/api/hash` test landed in [`58f90d0`](https://github.com/SGGaray/web-vuln-control-mapping/commit/58f90d05f4a34339f2eb93ac56fdc5a7c4f109e9).
+
+**Status at review:** Remediated.
 
 ## Finding 2: The Tool That Audits Security Headers Had None of Its Own
 
@@ -35,7 +42,9 @@ The audit covers the application code, its dependency posture, and its data laye
 
 **Effect:** Beyond the direct exposure (clickjacking, MIME sniffing, referrer leakage), there was a credibility problem: anyone technical enough to run my own tool against my own site would find it failing its own check. That is a worse outcome than the missing headers themselves.
 
-**Recommendation and remediation:** Added five of the six headers directly in `next.config.mjs` (Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy). Deliberately did not add Content-Security-Policy yet, a misconfigured CSP can break the app's own scripts and styles, and shipping a broken CSP is worse than shipping none. That remains an open, documented item rather than a rushed fix. Fixed in the same commit as Finding 1.
+**Recommendation and remediation:** Added five of the six headers directly in `next.config.mjs` (Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy). Deliberately did not add Content-Security-Policy yet, a misconfigured CSP can break the app's own scripts and styles, and shipping a broken CSP is worse than shipping none. Content-Security-Policy remained open at the close of the review, as a documented follow-up rather than a rushed fix. The five headers were added in [`c727ba7`](https://github.com/SGGaray/web-vuln-control-mapping/commit/c727ba7586ce38f6bdcd9eeaf01bb54a69a338e5), which carries the same commit message as the Finding 1 fixes.
+
+**Status at review:** Partially remediated. Five of the six headers were set; Content-Security-Policy stayed open as a follow-up.
 
 ## Finding 3: Framework Dependency Carried Fourteen Unpatched Advisories
 
@@ -47,7 +56,9 @@ The audit covers the application code, its dependency posture, and its data laye
 
 **Effect:** Before triage, the raw count (fourteen advisories, one rated high) looked alarming. After actually reading each one against the codebase, eight of the fourteen turned out to be inapplicable: they required features this project does not use at all (the image optimizer, middleware, i18n routing, rewrites, WebSocket upgrades, CSP nonces). The real residual exposure was narrower than the count suggested, but not zero.
 
-**Recommendation and remediation:** Upgraded to Next.js 15 and React 19 together, using a dedicated branch, a full local build and test pass, and a manual smoke test before merging. Verified the fix with a follow-up `npm audit`, which dropped from fourteen high-severity advisories to a single unrelated moderate one (an internal PostCSS dependency, not exploitable in this project's build process). Fixed in commit `chore: upgrade to Next.js 15, React 19, and lucide-react latest`.
+**Recommendation and remediation:** Upgraded to Next.js 15 and React 19 together, using a dedicated branch, a full local build and test pass, and a manual smoke test before merging. Verified the fix with a follow-up `npm audit`, which dropped from fourteen advisories reported under one high-severity entry to a single unrelated moderate one (an internal PostCSS dependency, not exploitable in this project's build process). Fixed in commit [`d69b1f9`](https://github.com/SGGaray/web-vuln-control-mapping/commit/d69b1f9601c7dc283d25d5fbc16f4dd5dcb9a17b) (`chore: upgrade to Next.js 15, React 19, and lucide-react latest`).
+
+**Status at review:** Remediated.
 
 ## Finding 4: The Tool Named for Control Mapping Never Populated Its Controls
 
@@ -59,7 +70,9 @@ The audit covers the application code, its dependency posture, and its data laye
 
 **Effect:** This is the most consequential place a gap could sit. The differentiator of the whole project is connecting the technical layer to governance, and a reviewer who opened the repo named for that exact mapping would have found the mapping absent. A tool that names a capability it does not deliver undercuts its own premise more than a missing feature elsewhere would.
 
-**Recommendation and remediation:** Made `owasp`, `control`, and `mitigation` required fields in the `PayloadExplanation` type, so an empty one is now a compile error rather than a silent omission. Populated all 23 entries with their real OWASP Top 10 2021 category, a mapped control (NIST SP 800-53 SI-10 / ISO 27001:2022 Annex A.8.28 and related), and a concrete per-technique mitigation. Updated `PayloadGenerator.tsx` to render the three governance fields in the Explain panel, visually separated from the conceptual fields. Verified with a clean `tsc --noEmit`, a passing production build, and the existing test suite. Fixed in commit `feat(explain): populate owasp/control/mitigation fields across all 23 payloads`.
+**Recommendation and remediation:** Made `owasp`, `control`, and `mitigation` required fields in the `PayloadExplanation` type, so an empty one is now a compile error rather than a silent omission. Populated all 23 entries with their real OWASP Top 10 2021 category, a mapped control (NIST SP 800-53 SI-10 / ISO 27001:2022 Annex A.8.28 and related), and a concrete per-technique mitigation. Updated `PayloadGenerator.tsx` to render the three governance fields in the Explain panel, visually separated from the conceptual fields. Verified with a clean `tsc --noEmit`, a passing production build, and the existing test suite. Fixed in commit [`8593419`](https://github.com/SGGaray/web-vuln-control-mapping/commit/8593419447b4f952d4c5a604122edbf5f088c598) (`feat(explain): populate owasp/control/mitigation fields across all 23 payloads`).
+
+**Status at review:** Remediated.
 
 ## What These Four Findings Have in Common
 

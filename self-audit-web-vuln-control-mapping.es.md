@@ -1,9 +1,14 @@
 # Auditando Mi Propia Herramienta
 ### Una Autoauditoría de web-vuln-control-mapping, Cuatro Hallazgos Reales y Lo Que Me Enseñaron Sobre el Riesgo
 
-**Caso de estudio | Sebastián Garay | GRC, Riesgo Humano y Shadow AI**
+**Caso de estudio | Sebastian Garay | GRC, Riesgo Humano y Shadow AI**
 
-> Esta es una autoauditoría genuina, no un ejercicio de demostración. Cada hallazgo de abajo se descubrió mientras construía y mantenía activamente este proyecto, y cada arreglo se aplicó al repositorio real y en producción. Las fechas y los mensajes de commit son reales. Nada acá está montado.
+## Contexto de la revisión
+
+- **Tipo:** autoauditoría de primera parte. Revisé mi propio proyecto; no es una evaluación independiente ni de terceros.
+- **Período de revisión:** del 5 al 11 de julio de 2026, las fechas de los commits de remediación citados abajo.
+- **Alcance temporal:** los hallazgos y sus estados describen el repositorio durante esa revisión. El proyecto siguió evolucionando desde entonces, y nada de lo que sigue describe su versión actual.
+- **Evidencia:** commits de [`SGGaray/web-vuln-control-mapping`](https://github.com/SGGaray/web-vuln-control-mapping), enlazados por hash en cada hallazgo.
 
 ## Por qué auditar tu propio código
 
@@ -11,7 +16,7 @@ La mayoría de los casos de estudio de portfolio analizan la brecha de otro. Eso
 
 ## Alcance y método
 
-La auditoría cubre el código de la aplicación, su postura de dependencias y su capa de datos, tal como existían a lo largo de varias semanas de desarrollo activo. Los hallazgos se descubrieron con una mezcla de revisión manual de código, escaneo de dependencias (`npm audit`) y pruebas directas de ambos endpoints de la API. No salí a buscar problemas para inflar este informe. Cada hallazgo acá refleja una brecha real, no una hipotética.
+La auditoría cubre el código de la aplicación, su postura de dependencias y su capa de datos, tal como existían a lo largo de varias semanas de desarrollo activo. Los hallazgos se descubrieron con una mezcla de revisión manual de código, escaneo de dependencias (`npm audit`) y pruebas directas de ambos endpoints de la API.
 
 ## Hallazgo 1: Los endpoints de la API aceptaban entrada sin límite
 
@@ -23,7 +28,9 @@ La auditoría cubre el código de la aplicación, su postura de dependencias y s
 
 **Efecto:** Un llamador podía enviar un payload arbitrariamente grande (megabytes de texto) a cualquiera de los dos endpoints, forzando al servidor a hashearlo o parsearlo, ocupando CPU sin costo para el atacante. Un vector de denegación de servicio trivial y sin autenticación, en una herramienta cuyo propósito entero es enseñar a pensar en exactamente esta clase de riesgo.
 
-**Recomendación y remediación:** Se agregaron chequeos explícitos de longitud máxima (100.000 caracteres para `/api/hash`, 20.000 para `/api/headers`) devolviendo HTTP 413 al excederse. Ambos límites cubiertos con tests unitarios que afirman la respuesta 413. Corregido en el commit `fix(security): add input length limits on API routes and security headers`.
+**Recomendación y remediación:** Se agregaron chequeos explícitos de longitud máxima (100.000 caracteres para `/api/hash`, 20.000 para `/api/headers`) devolviendo HTTP 413 al excederse. El límite de `/api/hash` quedó cubierto con un test unitario que afirma la respuesta 413; el de `/api/headers` no tuvo un test propio durante la revisión. Corregido en los commits [`308bebf`](https://github.com/SGGaray/web-vuln-control-mapping/commit/308bebf0b3798179606c85fcfaf55734d37ad7c4) (`/api/hash`) y [`7e8db67`](https://github.com/SGGaray/web-vuln-control-mapping/commit/7e8db6755c5bed42099423939258994cafd4fb59) (`/api/headers`), ambos titulados `fix(security): add input length limits on API routes and security headers`; el test de `/api/hash` llegó en [`58f90d0`](https://github.com/SGGaray/web-vuln-control-mapping/commit/58f90d05f4a34339f2eb93ac56fdc5a7c4f109e9).
+
+**Estado al cierre de la revisión:** Remediado.
 
 ## Hallazgo 2: La herramienta que audita headers de seguridad no tenía ninguno propio
 
@@ -35,7 +42,9 @@ La auditoría cubre el código de la aplicación, su postura de dependencias y s
 
 **Efecto:** Más allá de la exposición directa (clickjacking, MIME sniffing, filtración de referrer), había un problema de credibilidad: cualquiera con el nivel técnico para correr mi propia herramienta contra mi propio sitio lo encontraría fallando su propio chequeo. Eso es peor que los headers faltantes en sí.
 
-**Recomendación y remediación:** Se agregaron cinco de los seis headers directamente en `next.config.mjs` (Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy). Deliberadamente no se agregó Content-Security-Policy todavía: una CSP mal configurada puede romper los propios scripts y estilos de la app, y publicar una CSP rota es peor que no tener ninguna. Eso queda como un ítem abierto y documentado, no como un arreglo apurado. Corregido en el mismo commit que el Hallazgo 1.
+**Recomendación y remediación:** Se agregaron cinco de los seis headers directamente en `next.config.mjs` (Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy). Deliberadamente no se agregó Content-Security-Policy todavía: una CSP mal configurada puede romper los propios scripts y estilos de la app, y publicar una CSP rota es peor que no tener ninguna. CSP seguía pendiente al cierre de la revisión, como un seguimiento documentado y no como un arreglo apurado. Los cinco headers se agregaron en [`c727ba7`](https://github.com/SGGaray/web-vuln-control-mapping/commit/c727ba7586ce38f6bdcd9eeaf01bb54a69a338e5), que lleva el mismo mensaje de commit que las correcciones del Hallazgo 1.
+
+**Estado al cierre de la revisión:** Remediado parcialmente. Se configuraron cinco de los seis headers; Content-Security-Policy quedó abierto como seguimiento.
 
 ## Hallazgo 3: La dependencia del framework cargaba catorce advisories sin parchear
 
@@ -47,7 +56,9 @@ La auditoría cubre el código de la aplicación, su postura de dependencias y s
 
 **Efecto:** Antes del triage, el conteo crudo (catorce advisories, uno calificado como alto) se veía alarmante. Después de leer realmente cada uno contra el código, ocho de los catorce resultaron inaplicables: requerían funcionalidades que este proyecto no usa para nada (el optimizador de imágenes, middleware, ruteo i18n, rewrites, upgrades de WebSocket, nonces de CSP). La exposición residual real era más acotada de lo que el conteo sugería, pero no cero.
 
-**Recomendación y remediación:** Se actualizó a Next.js 15 y React 19 juntos, usando una rama dedicada, un build y test local completos, y un smoke test manual antes de mergear. Verificado con un `npm audit` de seguimiento, que bajó de catorce advisories de severidad alta a uno solo moderado y sin relación (una dependencia interna de PostCSS, no explotable en el proceso de build de este proyecto). Corregido en el commit `chore: upgrade to Next.js 15, React 19, and lucide-react latest`.
+**Recomendación y remediación:** Se actualizó a Next.js 15 y React 19 juntos, usando una rama dedicada, un build y test local completos, y un smoke test manual antes de mergear. Verificado con un `npm audit` de seguimiento, que bajó de catorce advisories reportados bajo una sola entrada de severidad alta a uno solo moderado y sin relación (una dependencia interna de PostCSS, no explotable en el proceso de build de este proyecto). Corregido en el commit [`d69b1f9`](https://github.com/SGGaray/web-vuln-control-mapping/commit/d69b1f9601c7dc283d25d5fbc16f4dd5dcb9a17b) (`chore: upgrade to Next.js 15, React 19, and lucide-react latest`).
+
+**Estado al cierre de la revisión:** Remediado.
 
 ## Hallazgo 4: La herramienta nombrada por el mapeo de controles nunca pobló sus controles
 
@@ -59,7 +70,9 @@ La auditoría cubre el código de la aplicación, su postura de dependencias y s
 
 **Efecto:** Este es el lugar más consecuente donde podría sentarse un vacío. El diferenciador de todo el proyecto es conectar la capa técnica con la gobernanza, y un revisor que abriera el repo nombrado por ese mapeo exacto habría encontrado el mapeo ausente. Una herramienta que nombra una capacidad que no entrega socava su propia premisa más de lo que lo haría una funcionalidad faltante en otro lado.
 
-**Recomendación y remediación:** Se hicieron `owasp`, `control` y `mitigation` campos obligatorios en el tipo `PayloadExplanation`, así que uno vacío ahora es un error de compilación en lugar de una omisión silenciosa. Se poblaron las 23 entradas con su categoría real de OWASP Top 10 2021, un control mapeado (NIST SP 800-53 SI-10 / ISO 27001:2022 Anexo A.8.28 y relacionados), y una mitigación concreta por técnica. Se actualizó `PayloadGenerator.tsx` para renderizar los tres campos de gobernanza en el panel Explain, separados visualmente de los campos conceptuales. Verificado con un `tsc --noEmit` limpio, un build de producción exitoso y la suite de tests existente. Corregido en el commit `feat(explain): populate owasp/control/mitigation fields across all 23 payloads`.
+**Recomendación y remediación:** Se hicieron `owasp`, `control` y `mitigation` campos obligatorios en el tipo `PayloadExplanation`, así que uno vacío ahora es un error de compilación en lugar de una omisión silenciosa. Se poblaron las 23 entradas con su categoría real de OWASP Top 10 2021, un control mapeado (NIST SP 800-53 SI-10 / ISO 27001:2022 Anexo A.8.28 y relacionados), y una mitigación concreta por técnica. Se actualizó `PayloadGenerator.tsx` para renderizar los tres campos de gobernanza en el panel Explain, separados visualmente de los campos conceptuales. Verificado con un `tsc --noEmit` limpio, un build de producción exitoso y la suite de tests existente. Corregido en el commit [`8593419`](https://github.com/SGGaray/web-vuln-control-mapping/commit/8593419447b4f952d4c5a604122edbf5f088c598) (`feat(explain): populate owasp/control/mitigation fields across all 23 payloads`).
+
+**Estado al cierre de la revisión:** Remediado.
 
 ## Qué tienen en común estos cuatro hallazgos
 
