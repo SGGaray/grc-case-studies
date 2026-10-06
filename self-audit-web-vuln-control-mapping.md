@@ -95,6 +95,14 @@ Auditing your own work is harder than it looks, not technically, but psychologic
 
 That is probably the most transferable lesson here, more than any individual fix. GRC work is not mainly about knowing the frameworks. It is about being willing to write down, in a document someone else will read, the exact moment your own judgment chose speed over rigor. I did that four times in one project. I expect to find it again in the next one.
 
+## Follow-up After the Review
+
+Content-Security-Policy was the remaining follow-up at the close of the July review. It was implemented in [`e70c71a`](https://github.com/SGGaray/web-vuln-control-mapping/commit/e70c71a60e9b7205beb64aab2520d28093e1647f) on October 6, 2026 and deployed to `wvcm.sggaray.com`.
+
+The policy is enforced in production. It restricts resources to the application's own origin, allows the inline scripts Next.js requires through SHA-256 hashes generated at build time, and does not use `'unsafe-inline'` or `'unsafe-eval'`.
+
+The finding statuses above describe the July review and remain unchanged.
+
 ---
 
 *Sources: git commit history and `npm audit` output of the `web-vuln-control-mapping` repository, before and after remediation. This is a first-party self-audit, not an independent third-party assessment.*
